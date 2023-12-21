@@ -78,10 +78,6 @@ impl Node {
         }
     }
 
-    fn build(&self) -> Vec<Target> {
-        build(&self.nodes)
-    }
-
     fn add(&mut self, mut node: Node) -> Option<*mut Node> {
         node.parent = Some(self);
         let k = node.key.to_string();

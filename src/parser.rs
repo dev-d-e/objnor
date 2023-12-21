@@ -91,10 +91,11 @@ impl<T: Contents> Parser<T> {
             self.row += 1;
             self.n = 0;
         }
-        if !is_crlf(c) {
-            self.current_function = Self::accept_pre_header;
-            self.accept_pre_header(c);
+        if is_crlf(c) {
+            return;
         }
+        self.current_function = Self::accept_pre_header;
+        self.accept_pre_header(c);
     }
 
     fn accept_pre_offset(&mut self, c: char) {
@@ -128,6 +129,8 @@ impl<T: Contents> Parser<T> {
             self.current_function = Self::offset_new_line;
             self.offset_new_line(c);
             return;
+        } else if c == END {
+            return;
         }
         self.error();
         self.current_function = Self::offset_error;
@@ -155,14 +158,14 @@ impl<T: Contents> Parser<T> {
 
     fn accept_pre_key(&mut self, c: char) {
         self.contents.pre_key(self.offset.number);
-        if is_crlf(c) {
+        if c == COLON {
+            self.error();
+            self.current_function = Self::key_error;
+            return;
+        } else if is_crlf(c) {
             self.error();
             self.current_function = Self::offset_new_line;
             self.offset_new_line(c);
-            return;
-        } else if c == COLON {
-            self.error();
-            self.current_function = Self::key_error;
             return;
         }
         self.current_function = Self::accept_key;
@@ -237,24 +240,18 @@ impl<T: Contents> Parser<T> {
             return;
         }
         let s = self.new_line.accept(c);
-        if is_crlf(c) {
-            if s.len() > 0 {
-                for i in 0..s.len() {
-                    self.contents.text(s[i]);
-                }
-                self.row += 1;
-                self.n = 0;
-            }
+        if s.len() > 0 {
+            self.row += 1;
+            self.n = 0;
+        } else if is_crlf(c) {
             return;
         }
-        if c == VERTICAL && s.len() > 0 {
+        if s.len() > 0 && c == VERTICAL {
             for i in 0..s.len() {
                 self.contents.text(s[i]);
             }
-            self.row += 1;
-            self.n = 0;
         }
-        if c == SPACE || c == VERTICAL || c == PLUS {
+        if c == VERTICAL || c == PLUS {
             self.current_function = Self::text_more;
             self.text_more(c);
             return;
@@ -265,9 +262,7 @@ impl<T: Contents> Parser<T> {
     }
 
     fn text_more(&mut self, c: char) {
-        if c == SPACE {
-            return;
-        } else if c == VERTICAL {
+        if c == VERTICAL {
             self.current_function = Self::accept_text;
             return;
         } else if c == PLUS {
@@ -320,6 +315,9 @@ impl NewLine {
                 self.has_lf = false;
             } else if c == LF {
                 self.has_cr = false;
+            } else {
+                self.has_cr = false;
+                self.has_lf = false;
             }
         } else if self.has_cr {
             if c == CR {

@@ -40,15 +40,15 @@ impl Target {
     }
 }
 
-struct Builder {
+struct Builder<T: FnMut(usize, usize)> {
     tree: Root,
     offset: usize,
     key: String,
     text: String,
-    err_function: fn(usize, usize),
+    err_function: T,
 }
 
-impl Contents for Builder {
+impl<T: FnMut(usize, usize)> Contents for Builder<T> {
     type Item = Vec<Target>;
 
     fn get(self) -> Self::Item {
@@ -90,8 +90,8 @@ impl Contents for Builder {
     }
 }
 
-impl Builder {
-    fn new(func: fn(usize, usize)) -> Self {
+impl<T: FnMut(usize, usize)> Builder<T> {
+    fn new(func: T) -> Self {
         Builder {
             tree: Root::new(),
             offset: 0,
@@ -127,13 +127,13 @@ where
     parser.contents().get()
 }
 
-pub fn parse_chars_to_target<T>(iter: T, func: fn(usize, usize)) -> Vec<Target>
+pub fn parse_chars_to_target<T>(iter: T, func: impl FnMut(usize, usize)) -> Vec<Target>
 where
     T: Iterator<Item = char>,
 {
     parse_chars(iter, Builder::new(func))
 }
 
-pub fn parse_slice_to_target(buf: &[char], func: fn(usize, usize)) -> Vec<Target> {
+pub fn parse_slice_to_target(buf: &[char], func: impl FnMut(usize, usize)) -> Vec<Target> {
     parse_slice(buf, Builder::new(func))
 }

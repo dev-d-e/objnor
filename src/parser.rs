@@ -49,6 +49,15 @@ impl<T: Contents> Parser<T> {
         }
     }
 
+    fn reset(&mut self) {
+        self.n = 0;
+        self.row = 1;
+        self.current_function = Self::accept_pre_header;
+        self.new_line = NewLine::new();
+        self.header_parser = HeaderParser::new();
+        self.offset = Offset::new();
+    }
+
     pub(crate) fn contents(self) -> T {
         self.contents
     }
@@ -109,6 +118,7 @@ impl<T: Contents> Parser<T> {
             self.offset_new_line(c);
             return;
         } else if c == END {
+            self.reset();
             return;
         }
         self.error();
@@ -130,6 +140,7 @@ impl<T: Contents> Parser<T> {
             self.offset_new_line(c);
             return;
         } else if c == END {
+            self.reset();
             return;
         }
         self.error();
@@ -189,7 +200,7 @@ impl<T: Contents> Parser<T> {
         } else if c == END {
             self.contents.post_key();
             self.contents.post_text();
-            self.current_function = Self::accept_pre_offset;
+            self.reset();
             return;
         }
         self.contents.key(c);
@@ -247,8 +258,8 @@ impl<T: Contents> Parser<T> {
             return;
         }
         if s.len() > 0 && c == VERTICAL {
-            for i in 0..s.len() {
-                self.contents.text(s[i]);
+            for i in s {
+                self.contents.text(*i);
             }
         }
         if c == VERTICAL || c == PLUS {
@@ -257,6 +268,10 @@ impl<T: Contents> Parser<T> {
             return;
         }
         self.contents.post_text();
+        if c == END {
+            self.reset();
+            return;
+        }
         self.current_function = Self::accept_pre_offset;
         self.accept_pre_offset(c);
     }
@@ -306,7 +321,7 @@ impl NewLine {
         }
     }
 
-    fn accept(&mut self, c: char) -> &[char] {
+    fn accept(&mut self, c: char) -> &Vec<char> {
         self.cr_lf.clear();
         if self.has_cr && self.has_lf {
             self.cr_lf.push(CR);
@@ -400,7 +415,7 @@ impl Offset {
     }
 
     fn post(&mut self) -> bool {
-        match self.str.parse::<usize>() {
+        match usize::from_str_radix(&self.str, 16) {
             Ok(n) => {
                 self.number = n;
             }
@@ -409,7 +424,7 @@ impl Offset {
                 return false;
             }
         }
-        if self.number > (self.available + 1) {
+        if self.number > self.available {
             return false;
         }
         self.available = self.number + 1;

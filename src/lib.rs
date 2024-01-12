@@ -26,19 +26,22 @@
 //!Target { name: "c", text: ["\n\ncc\n"], value: [] }]
 //!```
 //!
-//!*start with offset and tilde(~), then data key, then colon(:). If next offset is greater, it's child object.
+//!* start with offset and tilde(~), then data key, then colon(:). If next offset is greater, it's child object.
 //!
-//!*multiple lines text use vertical(|).
+//!* multiple lines text use vertical(|).
 //!
-//!*array text use plus(+).
+//!* array text use plus(+).
 //!
 
 #![allow(dead_code)]
 
 mod contents;
 mod header;
+///To HTML String.
+pub mod html;
 mod parser;
 mod tree;
+mod xml;
 
 pub use crate::contents::*;
 
